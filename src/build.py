@@ -1,0 +1,325 @@
+# -*- coding: utf-8 -*-
+import html, json, os, re
+BBS={17:('2019-01-02',147),25:('2019-11-25',158),33:('2020-03-18',166),43:('2020-05-19',200),46:('2020-06-19',203),47:('2020-06-24',204),51:('2020-08-14',208),58:('2020-10-12',215),60:('2020-10-21',217),62:('2020-11-30',219),65:('2020-12-23',222),69:('2021-02-18',226),73:('2021-03-19',230),91:('2021-07-29',248),100:('2021-09-30',259),109:('2021-12-29',268),113:('2022-02-04',273),118:('2022-03-28',279),125:('2022-07-20',288),127:('2022-08-03',290),152:('2023-05-10',321),153:('2023-05-17',322),156:('2023-07-05',328),158:('2023-07-11',330),164:('2023-12-18',343),170:('2024-03-25',349),173:('2024-04-19',352),176:('2024-04-26',355),177:('2024-04-26',356),178:('2024-05-07',357),181:('2024-06-28',360),182:('2024-07-10',361),183:('2024-07-16',362),184:('2024-07-23',363),188:('2024-09-24',367),190:('2024-10-28',369),191:('2024-10-29',370),192:('2024-12-04',371),193:('2024-12-09',372),194:('2024-12-27',373),195:('2024-12-30',374),196:('2024-12-30',376),197:('2025-03-31',377),198:('2025-04-16',378),199:('2025-04-22',379),201:('2025-07-16',381),202:('2025-09-23',382),204:('2025-11-21',385),205:('2025-12-01',386),206:('2025-12-16',388),207:('2026-01-21',389),208:('2026-03-30',391),209:('2026-04-17',392),210:('2026-04-17',393),211:('2026-04-17',394),212:('2026-04-17',395),213:('2026-04-17',396),214:('2026-04-22',397),215:('2026-04-23',398),217:('2026-04-28',400),218:('2026-05-13',401),223:('2026-06-15',406),224:('2026-07-01',407),225:('2026-07-06',408),226:('2026-07-13',409),227:('2026-07-24',410),228:('2026-07-24',411),229:('2026-07-29',412),231:('2026-08-12',414),232:('2026-08-14',415),234:('2026-08-21',417),235:('2026-08-26',418),236:('2026-09-07',419),237:('2026-09-10',420),238:('2026-09-16',421),239:('2026-09-21',422)}
+BASE='https://autobell.co.kr/autoAuction/auctionNoticeView?bbsNo=%d&pageNo=1'
+def S(*nos):
+    parts=[]
+    for n in nos:
+        d,b=BBS[n]
+        parts.append('<a class="sl" href="%s">#%d(%s)</a>'%(BASE%b,n,d))
+    return '출처: 오토벨 스마트옥션 공지사항 '+' · '.join(parts)
+def fn(n): return '<sup class="fn">%d</sup>'%n
+
+slides=[]
+def slide(kicker,title,body,notes,source,cls=''):
+    slides.append(dict(kicker=kicker,title=title,body=body,notes=notes,source=source,cls=cls))
+
+# 1 표지
+slide('개요','오토벨 스마트옥션<br>최근 정책·서비스 유형 변경 정리',
+'''<div class="cover">
+<p class="lead">공지사항 전 기간(2019~2026-09, 239건)을 검토해 <b>서비스 유형</b>, <b>채널</b>, <b>정책 변경</b>을 정리했습니다. 기한을 두지 않고, 최근에 바뀐 것과 그 변천 과정을 함께 봅니다.</p>
+<div class="three">
+<div class="box"><h3>검토 범위</h3><ul><li>공지 제목 239건 전수 확인</li><li>서비스·정책에 영향이 있는 공지는 본문(이미지 포함) 판독</li><li>조회일 2026-09-21</li></ul></div>
+<div class="box"><h3>읽는 법</h3><ul><li>용어는 슬라이드 하단 각주로 설명</li><li>출처는 공지 번호·게시일, 번호를 누르면 원문 열림(아티팩트)</li><li>공지 번호는 게시판 목록 번호<sup class="fn">1</sup></li></ul></div>
+<div class="box"><h3>유의</h3><ul><li>공지 본문 대부분이 이미지라 화면을 읽어 옮김</li><li>인용 전 원문 재확인 권장</li><li>"제안서 반영" 문구는 해석이며 공지 사실과 구분</li></ul></div>
+</div></div>''',
+['공지 번호: 스마트옥션 공지사항 목록의 번호(예: #232). 상세 페이지 주소는 별도 식별번호(bbsNo)를 쓰며, 마지막 슬라이드 표에 대응 관계를 수록.'],
+S(239)+' · 게시판 https://autobell.co.kr/autoAuction/auctionNotice')
+
+# 2 서비스 유형 지도 1: 경매 방식
+slide('서비스 유형 ①','경매 방식 유형과 최근 변경',
+'''<table>
+<colgroup><col style="width:15%"><col style="width:30%"><col style="width:24%"><col style="width:31%"></colgroup>
+<thead><tr><th>유형</th><th>방식</th><th>대상·조건</th><th>도입 · 최근 변경</th></tr></thead><tbody>
+<tr><td>실시간경매'''+fn(1)+'''</td><td>출품번호 순으로 실시간 응찰. 기본 13:00 시작, 예외는 회차별 공지</td><td>경매회원. 현장·PC·앱으로 참여</td><td>2026-08-25부터 응찰 단위 <b>전 구간 5만원</b></td></tr>
+<tr><td>부재자입찰'''+fn(2)+'''</td><td>실시간에 참여하지 못할 때 응찰가를 미리 접수. 입찰가는 희망가보다 높아야 함</td><td>접수·취소: 경매 전일 09시 ~ 해당 차량 진행 50대 전 (레인별 앞 50대는 시작 30분 전까지)</td><td>2020-06 입찰자도 입찰가 이상에서 응찰 가능, 2021-08 웹브라우저 이용, 2023-07 안내 재공지</td></tr>
+<tr><td>후상담입찰'''+fn(3)+'''</td><td>유찰 차량에 가격을 제시해 출품자와 체결</td><td>규약상 마감은 경매장이 공지한 시간</td><td>2022-08 카카오채널 후상담, 2026-03 <b>야간 후상담</b>(다음날 08시까지)</td></tr>
+<tr><td>지정시간경매'''+fn(4)+'''</td><td>정해진 기간 동안 입찰을 받고 종료 시점에 낙찰. 상향식'''+fn(5)+'''</td><td>주말경매(옥션-위켄드), 우수회원 전용 경매</td><td>2023-05 시범 → 2023-07-08 정규, 2026-04 입찰 유의사항 재안내</td></tr>
+<tr><td>즉시체결'''+fn(6)+'''</td><td>즉시체결가로 별도 확인 없이 바로 낙찰</td><td>경매회원</td><td>2021-02-19 오픈, 2022-04 옥션 나잇(저녁 판매시간 연장)</td></tr>
+</tbody></table>''',
+['실시간경매: 경매센터·PC 프로그램·앱에서 진행하는 라이브 경매. 공지 #158에서 부재자입찰과 대비해 설명.','부재자입찰: 사전에 응찰가를 접수해 두면 경쟁자가 없을 때 희망가, 있을 때 경쟁자가 사라진 시점에서 1회 상승한 금액에 낙찰(#158).','후상담입찰: 경매에서 유찰된 차량에 대해 입찰가를 제시하고 협의해 체결하는 방식(#127).','지정시간경매: 공지에서 "공매방식"이라고 설명한 방식(#158). 종료 전까지 입찰·수정이 가능(#152 FAQ).','상향식: 입찰가가 올라가는 방향으로만 조정 가능한 방식. 하향 수정은 취소 후 재입찰(#210).','즉시체결: 시작가·희망가와 별도로 정해진 즉시체결가를 누르면 바로 낙찰(#69).'],
+S(232,158,127,208,152,156,210,69,47,91,118,239))
+
+# 3 서비스 유형 지도 2: 부가 서비스
+slide('서비스 유형 ②','회원 출품·점검·수출·탁송 등 부가 서비스',
+'''<table>
+<colgroup><col style="width:17%"><col style="width:40%"><col style="width:43%"></colgroup>
+<thead><tr><th>서비스</th><th>내용</th><th>최근 변경</th></tr></thead><tbody>
+<tr><td>회원 출품</td><td>경매회원이 차량을 출품. 위탁 출품 접수는 경매 전일 12시까지(2025-04-07~), 이후 접수분은 차회 경매</td><td>2026-01 규약: 출품 조건·사전 통보 사항 강화, 용어를 '출품위탁'에서 '출품 의뢰'로 변경. 2026-04~05 출품수수료 면제 이벤트</td></tr>
+<tr><td>성능·상태 점검'''+fn(1)+'''</td><td>낙찰 회원이 점검 기록부를 발급받는 서비스 27,500원(VAT 포함'''+fn(2)+''')</td><td>2024-05 점검 의견 체계 변경, 2024-12 AR 앱 종료(출품리스트로 일원화)</td></tr>
+<tr><td>프리미엄 점검'''+fn(3)+'''</td><td>우수회원 전용 경매에서 도막 측정 수치와 열화상 사진 제공(시범). 참고용, 클레임 대상 아님</td><td>2026-06 시범 시작, 도면 시각화 등 정식 도입 예정</td></tr>
+<tr><td>수출공매'''+fn(4)+'''</td><td>수출용 차량 공매. 회원 유형이 별도로 구분됨</td><td>2025-09-23 개별 계약서 폐지, 「수출공매 규약」 동의 방식 시행. 수출 목적 낙찰 불가 차량 안내(2024-12, 2026-04)</td></tr>
+<tr><td>탁송'''+fn(5)+'''</td><td>낙찰 차량 탁송. 센터별 탁송 단가를 매년 공지</td><td>2026-05-01 톤수 구간 개편(8.5t 이하/초과), 2026-07-01 영종구 단가 신설</td></tr>
+</tbody></table>''',
+['성능·상태 점검 기록부: 차량의 성능과 상태를 점검한 결과서. 점검자는 (주)에프에이자동차진단평가, 발급은 현장·온라인·유선 중 택 1(#192).','VAT: 부가가치세. 공지의 요금 표기는 대부분 VAT 포함(#205).','도막 측정: 차체 도장 층의 두께를 µm 단위로 재서 교환·판금·재도색 여부를 가늠하는 점검. 열화상: 표면 온도 분포 촬영으로 에어컨·통풍시트 작동 여부를 확인(#223).','수출공매: 수출 목적의 공매. 개별 계약서 대신 규약 동의로 운영(#202).','탁송: 낙찰 차량을 지정 장소로 운송하는 서비스. 톤수·지역별 단가를 공지(#207, #224).'],
+S(197,206,217,192,176,191,223,202,193,214,207,224))
+
+# 4 채널 지도
+slide('채널','이용 채널과 변경 이력',
+'''<table>
+<colgroup><col style="width:17%"><col style="width:34%"><col style="width:49%"></colgroup>
+<thead><tr><th>채널</th><th>주요 기능</th><th>변경 이력</th></tr></thead><tbody>
+<tr><td>경매센터</td><td>현장 경매, 차량 확인, 반입·반출</td><td>분당·시화·양산에 <b>인천 추가</b>(2023 개소, 2026-07 기사 기준 4개 센터). 센터·요일·레인 조합은 주차별 공지</td></tr>
+<tr><td>PC 응찰 프로그램</td><td>실시간 응찰, 부재자·후상담 입찰, 낙찰·정산 조회</td><td>2024-05-07 리뉴얼(재설치), 2025-04 Java 재설치 안내, <b>2026-05-13 3.2.0: Java 별도 설치 불필요</b>, 응찰 알림음 추가</td></tr>
+<tr><td>모바일 앱</td><td>PC와 동일 기능을 앱으로 제공</td><td>2024-05-07 리뉴얼(앱 업데이트). 지원 OS: Android 5.0, iOS 11.0 이상(이용안내 기준)</td></tr>
+<tr><td>오토벨 웹사이트</td><td>스마트옥션 소개, 출품리스트, 공지사항, 회원가입</td><td>2022-02-28 스마트옥션 홈페이지(glovisaa.com) 종료, 오토벨(autobell.co.kr)로 전환. 2022-01 통합 중고차 플랫폼 오토벨 오픈</td></tr>
+<tr><td>카카오톡 채널</td><td>알림톡'''+fn(1)+''', 버튼형 후상담 체결·금액 조정</td><td>2022-07 공식 오픈, 2022-08 후상담 서비스 오픈(이후 후상담 전화 연락 중단)</td></tr>
+<tr><td>알림 수단</td><td>알림톡, SMS/LMS'''+fn(2)+''', 이메일, 푸시</td><td>2026-08 광고성 정보 수신 동의 체계 개편, 야간 알림 별도 동의 삭제</td></tr>
+<tr><td>AR 앱</td><td>출품차량 위치·성능점검 정보(증강현실)</td><td>2019-11 오픈 → <b>2024-12 종료</b>, 정보는 PC/모바일 출품리스트에서 확인</td></tr>
+</tbody></table>''',
+['알림톡: 카카오톡 채널을 통해 보내는 정보성 메시지. 버튼형은 메시지 안의 버튼으로 서비스를 선택·체결(#127).','LMS: 장문 문자메시지. 공지 #231은 야간(21:00~08:00) LMS 수신 동의 항목을 삭제한 내용.'],
+S(113,109,125,127,178,198,218,191,231,25)+'<br>센터 현황: 물류신문 2026-07-20 · 오토벨 스마트옥션 이용안내(autobell.co.kr/autoAuction/auctionInfo?seq=3)')
+
+# 5 타임라인 1
+slide('변경 요약 ①','서비스 유형 변천 2020~2023',
+'''<table class="tl">
+<colgroup><col style="width:9%"><col style="width:91%"></colgroup>
+<tbody>
+<tr><td>2020</td><td><b>03-23</b> 스마트옥션 오픈 · <b>06-25</b> 부재자 입찰자도 입찰가 이상에서 응찰 가능 · <b>06-30</b> 2레인 운영 · <b>10월</b> 우수회원 전용 온라인 경매(상위 300개사, 수·금 지정시간) · <b>12월</b> 홈페이지에서 부재자입찰 접수</td></tr>
+<tr><td>2021</td><td><b>02-19</b> 즉시체결 오픈 · <b>08-02</b> 스마트옥션 2.0(부재자입찰 웹 전환, 경락사실확인서 2종'''+fn(1)+''') · <b>10-05</b> 통합경매 운영(요일별 센터 독립·통합) · <b>12월</b> 통합 중고차 플랫폼 오토벨 사전 공지</td></tr>
+<tr><td>2022</td><td><b>02-28</b> 스마트옥션 홈페이지 종료, 오토벨로 전환 · <b>04-01</b> 옥션 나잇(저녁 18~23시 즉시체결 판매시간 연장, 자사 차량) · <b>07~08월</b> 카카오채널 오픈, 카카오채널 후상담 서비스</td></tr>
+<tr><td>2023</td><td><b>05~06월</b> 옥션-위켄드 시범(토 09시~월 12시, 51시간, 4회) · <b>07-08</b> 주말 지정시간경매 정규 편성 · <b>12-20</b> 수요일 인천/시화 경매 단일 레인 통합</td></tr>
+</tbody></table>
+<p class="hint">응찰 단위 표기는 출처마다 다름: 2020~2021 안내는 500만원 전 3만원/후 5만원, 2023-07 공지(#158)는 시작가에 따라 3/5/10만원, 2026-08 공지(#232)는 변경 전을 3만/5만원으로 표기. 제안서에는 현행(전 구간 5만원)만 인용 권장.</p>''',
+['경락사실확인서: 낙찰 사실을 증빙하는 서류. 2021-08부터 수납용과 이전등록용으로 나눠 제공하고, 이전등록용에는 수수료를 표시하지 않음(#91).'],
+S(33,47,46,58,65,69,91,100,109,113,118,125,127,152,153,156,164,158,232))
+
+# 6 타임라인 2
+slide('변경 요약 ②','서비스 유형 변천 2024~2026',
+'''<table class="tl">
+<colgroup><col style="width:9%"><col style="width:91%"></colgroup>
+<tbody>
+<tr><td>2024</td><td><b>05-07</b> 스마트옥션 PC·모바일 리뉴얼(검색 강화, 회원 등급 체계, 성능점검 체계 변경) · <b>07</b> 신규 회원등급 · <b>08-24</b> 경매규약 개정 · <b>11-01</b> 금·수 경매 센터별 2레인 · <b>12월</b> AR 앱 종료, 성능·상태 점검 기록부 발급 서비스</td></tr>
+<tr><td>2025</td><td><b>01-03</b> 3개 센터 통합 경매(센터별 3레인) · <b>04-07</b> 위탁 출품 접수 마감 경매 전일 12시 · <b>04</b> 회원 등급제·혜택 개편 · <b>09-23</b> 수출공매 규약 시행</td></tr>
+<tr><td>2026</td><td><b>01-01</b> 규약·요금 개정, 현금 정산 중단 · <b>03-30</b> 야간 후상담입찰과 알림톡 · <b>04</b> 지정시간경매 입찰 유의사항, 수출 목적 낙찰 불가 차량 안내 · <b>05-13</b> PC 프로그램 3.2.0 · <b>06</b> 우수회원 전용 프리미엄 점검 시범 · <b>07~08월</b> 개인정보·동의 개편 · <b>08-25</b> 응찰 단위 전 구간 5만원</td></tr>
+</tbody></table>
+<div class="cards"><div class="box"><h3>최근 12개월 핵심</h3><p>요금·규약(1/1), 후상담 야간화(3/30), 프로그램 실행환경(5/13), 프리미엄 점검(6월~), 동의 체계(7~8월), 응찰 단위(8/25)</p></div>
+<div class="box"><h3>지속 변경 항목</h3><p>레인 구성, 센터별 요일, 회원 등급·쿠폰 기준, 탁송 단가는 수시로 바뀌므로 고정값으로 쓰지 않는 것이 안전</p></div></div>''',
+[],
+S(177,178,183,184,190,191,192,195,197,199,202,204,205,206,208,210,214,218,223,229,231,235,232))
+
+# 7 2026 요금·규약
+slide('2026 정책 ①','요금·회원 규약 개정 (2026-01-01 시행)',
+'''<table>
+<colgroup><col style="width:20%"><col style="width:22%"><col style="width:22%"><col style="width:36%"></colgroup>
+<thead><tr><th>항목</th><th>변경 전</th><th>변경 후</th><th>비고</th></tr></thead><tbody>
+<tr><td>연회비'''+fn(1)+'''</td><td>25만원</td><td><b>15만원</b></td><td>VAT 포함, 10만원 인하. 1년 단위 납부</td></tr>
+<tr><td>낙찰수수료'''+fn(2)+''' 최소액</td><td>110,000원</td><td><b>165,000원</b></td><td>요율 2.2%, 최대 440,000원은 유지. 출품자 부담 수수료는 최저 110,000 / 최대 440,000원</td></tr>
+<tr><td>보증금</td><td>300만원</td><td>300만원 유지</td><td>보증금·연회비는 현금 납부(규약 제5조)</td></tr>
+<tr><td>정산 방식</td><td>현금 정산 가능</td><td><b>현금 정산 중단</b></td><td>모든 정산은 전용 계좌 이체</td></tr>
+<tr><td>후상담 마감'''+fn(3)+'''</td><td>경매 당일 17:00</td><td>경매장이 사전 공지한 시간</td><td>미체결 차량은 최종 마감 전까지 재신청 가능(제17조)</td></tr>
+<tr><td>서브회원'''+fn(4)+'''</td><td>무역업 종사자 요건 완화 규정 있음</td><td>재직증명서 제출 시 가입 요청 가능, 거절 사유 3가지 명문화</td><td>요건 상실 시 회원이 즉시 탈퇴 조치(제4조의2)</td></tr>
+<tr><td>기타</td><td>—</td><td>대표자 사망 시 탈퇴 절차 신설, 미반출 주차료, 검사비 공제, 클레임 사유 정비</td><td>식당 중식 제공 중단</td></tr>
+</tbody></table>''',
+['연회비: 경매회원이 연 단위로 납부하는 회비. 규약 제5조 ⑥.','낙찰수수료: 낙찰 시 낙찰자와 출품자가 각각 부담하는 수수료. 계산 결과가 최소액 이하이면 최소액을 적용(규약 제22조).','후상담판매: 경매 당일 유찰 차량에 대한 상담 판매. 2026 규약은 마감 시간을 공지 방식으로 변경(제17조).','서브회원: 경매장에 요청해 가입시키는 하위 회원. 서브회원의 행위는 회원의 행위로 간주(제4조의2).'],
+S(204,205,206))
+
+# 8 2026 입찰·프로그램
+slide('2026 정책 ②','후상담·지정시간경매·응찰 단위·프로그램',
+'''<div class="grid2">
+<div class="box"><h3>후상담입찰 개편 (2026-03-30)</h3><ul>
+<li>운영 시간을 <b>경매 다음날 08시까지</b> 연장(야간 후상담)</li>
+<li>야간 후상담은 최소 입찰가 이상만 가능, <b>21시·24시·다음날 08시</b>에 차량별 최고 입찰자에게 낙찰</li>
+<li>알림톡: 최고 입찰자이거나 순위가 바뀐 경우, 관심 차량에 후상담이 발생한 경우 발송</li>
+<li>야간 광고성 메시지 수신 동의자에게 발송한다고 안내되었으나, 2026-08 동의 체계 개편으로 야간 알림 동의 항목이 삭제됨</li></ul></div>
+<div class="box"><h3>지정시간경매 입찰 유의 (2026-04-17)</h3><ul>
+<li>주말경매와 우수회원 전용 경매는 <b>상향식</b>: 입찰금액 수정은 상향만 가능</li>
+<li>하향이 필요하면 입찰 취소 후 재입찰(차량당 1회)</li>
+<li>정책 변경은 없는 재안내</li></ul></div>
+<div class="box"><h3>응찰가격 상승 단위 (2026-08-25~)</h3><ul>
+<li>전 구간 <b>5만원</b> 단위 상승</li>
+<li>변경 전: 500만원 도달 전까지 3만원, 초과 시 5만원</li></ul></div>
+<div class="box"><h3>PC 프로그램 (2026-05-13, 3.2.0)</h3><ul>
+<li>업데이트 후 <b>Java 별도 설치 불필요</b>(기존 Java 삭제 권고)'''+fn(1)+'''</li>
+<li>응찰 시 알림음 추가, 환경설정에서 on/off(전체 사운드와 별개)</li>
+<li>이전(2025-04)에는 실행 불가 시 JAVA 재설치 안내</li></ul></div>
+</div>''',
+['Java: PC 프로그램이 동작하는 데 필요한 실행환경. 공지 #218은 번들된 Azul Zulu JDK를 쓰며 기존 설치분 삭제를 안내.'],
+S(208,210,232,218,198,231,206))
+
+# 9 지정시간 계열 상세
+slide('서비스 유형 상세','지정시간경매 계열 — 옥션-위켄드, 우수회원 전용 경매, 옥션 나잇',
+'''<table>
+<colgroup><col style="width:17%"><col style="width:41%"><col style="width:42%"></colgroup>
+<thead><tr><th>구분</th><th>규칙(공지 기준)</th><th>도입 · 변경</th></tr></thead><tbody>
+<tr><td>옥션-위켄드'''+fn(1)+'''</td><td>토 09시 ~ 월 12시(51시간) 지정시간경매. 전 회원 대상, 판매는 글로비스 소유 자사 차량. <b>입찰한 가격 그대로 낙찰</b>(부재자입찰과 낙찰 방식이 다름), 낙찰수수료 2.2%. 종료 전까지 입찰·수정 자유. 체결·정산·반출은 종료 후 영업일. 주말 실차 확인 불가, 신규 출품 80대 구성</td><td>2023-05-13 시범(6/5까지 총 4회), 분당센터 시범 5/19, <b>2023-07-08 정규 편성</b></td></tr>
+<tr><td>우수회원 전용 경매'''+fn(2)+'''</td><td>등급 상위 회원 대상 지정시간 경매. 예: 9/15 화 20:00 ~ 9/16 수 15:00, 출품 120대. 지정시간 입찰은 상향식</td><td>2020-10 4분기 온라인 전용 경매(상위 300개사, 수·금 10~11시) → 현재 월별 운영, 2026-06 프리미엄 점검 시범 병행</td></tr>
+<tr><td>옥션 나잇'''+fn(3)+'''</td><td>모든 경매 즉시체결 판매시간 18:00~23:00 연장. 즉시체결을 통한 입찰만 허용, 판매는 자사 차량, 정산·반출은 익일 영업일</td><td>2022-04-01 시범(6월까지). 2024-03~04에는 실시간경매 옥션 나잇 단축·미운영 공지가 게시됨</td></tr>
+</tbody></table>''',
+['옥션-위켄드: 주말에 진행하는 지정시간경매의 명칭. 시범 기간 최저입찰가는 실시간경매에서 공개하지 않는 희망가와 같은 개념으로 설명(#153 FAQ).','우수회원 전용 경매: 프라임옥션 등으로 표기. 등급 기준은 회원등급제(2024-07~)와 연동.','옥션 나잇: 저녁 시간대 판매 서비스. 2022-04는 즉시체결 판매시간 연장, 2024 공지는 실시간경매의 옥션 나잇 운영 시간 안내.'],
+S(152,153,156,58,238,210,118,170,173))
+
+# 10 개인정보
+slide('2026 정책 ③','개인정보·동의 체계 개편 (2026-07~08)',
+'''<table>
+<colgroup><col style="width:16%"><col style="width:26%"><col style="width:58%"></colgroup>
+<thead><tr><th>시행일</th><th>공지</th><th>변경 내용</th></tr></thead><tbody>
+<tr><td>2026-07-29</td><td>개인정보처리방침 변경</td><td>장기 미이용자(1년 이상) 휴면계정 분리보관 조항 삭제'''+fn(1)+'''. 경매회원 필수항목에서 <b>CI</b>'''+fn(2)+''' 삭제(방침의 세금계산서·매매계약 목적 항목에는 주민등록번호가 남아 있음)</td></tr>
+<tr><td>2026-08-12</td><td>마케팅 활용·야간 알림 동의 변경</td><td>'마케팅 활용 동의'를 <b>마케팅 목적 개인정보 수집·이용 동의</b>와 <b>광고성 정보 수신 동의</b>'''+fn(3)+'''로 분리(수신방법: 알림톡, SMS/LMS, 이메일, 푸시, 철회는 마이페이지). <b>야간 알림 수신 동의(21:00~08:00) 삭제</b>. 미동의해도 경매회원 가입 가능</td></tr>
+<tr><td>2026-08-26</td><td>개인정보 수집·이용 동의 변경</td><td><b>고유식별정보</b>'''+fn(4)+''' 수집·이용 별도 동의 삭제. 회원가입 필수항목: 이름·생년월일·연락처·주소, 보유기간 탈퇴일까지(이전 3년까지). 선택 동의(가입자 사진·이메일·우편물 주소) 삭제. 출품 동의는 이름·생년월일·연락처·주소, 차량번호, 계좌정보, 탁송 정보(보유 5년), 제3자 제공 동의(소유자용)는 필수'''+fn(5)+'''</td></tr>
+</tbody></table>''',
+['휴면계정: 일정 기간 이용하지 않은 계정. 이전 방침은 1년 이상 미이용 시 분리보관(개인정보보호법 제39조의6)이라고 명시했고 해당 조항이 삭제됨.','CI(Connecting Information): 본인확인기관이 발급하는 암호화된 동일인 식별정보.','광고성 정보 수신 동의: 정보통신망법에 따라 광고성 정보를 보내기 전에 받는 사전 동의(공지 문구 기준).','고유식별정보: 주민등록번호처럼 법령에 근거해 별도 동의·처리 요건이 필요한 정보.','제3자 제공(소유자용): 낙찰 차량 이전을 위해 낙찰회원사에게(이전 완료 시까지), 사고이력 조회를 위해 (사)전국자동차경매장협회에게(1일) 제공하는 항목.'],
+S(229,231,235,208))
+
+# 11 점검·클레임
+slide('2026 정책 ④','점검 서비스·클레임·입찰 제한',
+'''<div class="grid2">
+<div class="box"><h3>프리미엄 점검 (2026-06~, 시범)</h3><ul><li>도막 측정 수치: 외판 부위별(중앙·가장자리·의심부위 각 1컷)</li><li>열화상 사진: 에어컨·통풍시트 정상작동 확인</li><li>교환·판금·재도색 판단의 <b>참고용</b>, 클레임 처리 대상 아님</li><li>향후 차량 도면 시각화, 상태 음영 표시 도입 예정</li></ul></div>
+<div class="box"><h3>클레임 사유 정비</h3><ul><li>친환경 냉매'''+fn(1)+''' 적용 차량의 냉매 부족·누출, 에바포레이터 손상·오염은 <b>클레임 불가</b>(2026-07-06)</li><li>규약 제27조: 리콜 등 차량 결함, 비골격부위 도장 등 사유 명확화(2026-01-01)</li><li>규약 제12조: 경고등, 압류·저당·침수·화재·전손 이력 등은 사전 통보와 경매장 허가 시에만 출품</li></ul></div>
+<div class="box"><h3>수출 목적 낙찰 불가 차량 (2026-04-22)</h3><ul><li>최초등록 1년 미만 모든 차량</li><li>최초등록 8년 미만 전기차(2022-07-01 이후, 특이사항 기재)</li><li>최초등록 2년 미만 어린이 통학용 LPG차</li><li>제한 여부 확인·판단 책임은 낙찰회원'''+fn(2)+'''</li></ul></div>
+<div class="box"><h3>사고이력·연료 정보 (2026-04-23)</h3><ul><li>사고이력조회(카히스토리)'''+fn(3)+'''의 연료가 실제와 다른 사례가 드물게 있음</li><li>실제 연료는 <b>출품상세 &gt; 차량정보</b>의 표기 기준으로 확인</li></ul></div>
+</div>''',
+['친환경 냉매(R-1234yf): 차량 에어컨에 쓰이는 냉매의 한 종류. 공지는 이 냉매의 고유한 특성으로 생기는 문제를 클레임 대상에서 제외(근거: 규약 제28조 8항 1호 가목으로 표기).','보조금 환수·말소 등 제한 여부 확인과 판단 책임은 낙찰회원에게 있다고 공지에 명시(#214).','카히스토리: 보험개발원이 제공하는 차량 사고이력 조회. 당사가 직접 생성·관리하는 정보가 아니라고 공지에 명시(#215).'],
+S(223,226,238,225,206,214,215,176))
+
+# 12 회원 등급 쿠폰
+slide('회원·혜택','회원 등급·쿠폰 체계의 변천',
+'''<table>
+<colgroup><col style="width:14%"><col style="width:43%"><col style="width:43%"></colgroup>
+<thead><tr><th></th><th>2024-07 (신규 회원등급)</th><th>2025-04 (개편)</th></tr></thead><tbody>
+<tr><td>VVIP'''+fn(1)+'''</td><td>직전 분기 누적 낙찰대수 상위 1.5%. 낙찰수수료 5만원 할인쿠폰 3매 + 낙찰취소수수료 면제쿠폰 1매</td><td>직전 분기 월평균 낙찰 <b>45대 또는 4.5억원</b>. 5만원 할인쿠폰 5매 + 면제쿠폰 1매. 120% 달성 시 동일 쿠폰 2매 추가(해당 분기 45대 이상)</td></tr>
+<tr><td>VIP</td><td>월평균 낙찰 15대 또는 1억원. 3만원 할인쿠폰 3매</td><td>기준 동일. 3만원 할인쿠폰 5매</td></tr>
+<tr><td>신규</td><td>가입 후 3개월. 3만원 할인쿠폰 1매</td><td>가입 후 3개월. 낙찰취소수수료 면제쿠폰 1매</td></tr>
+</tbody></table>
+<div class="grid2" style="margin-top:22px">
+<div class="box"><h3>공통 규칙(2025-04 기준)</h3><ul><li>등급은 분기별 부여, 메인·서브 계정 등급 동일</li><li>쿠폰은 직접 낙찰받은 자사차량에 1대 1장, 메인 회원번호 계정에서만 사용</li><li>쿠폰 금액은 VAT 제외, <b>사용 후 낙찰취소 시 재발급 불가</b></li></ul></div>
+<div class="box"><h3>2026 반복 운영</h3><ul><li>분기별 등급 유지·최초 전환 회원 쿠폰(#211, #212, #228), 회원 출품 낙찰대수 달성 캠페인(#213, #227)</li><li>2026-04~05 출품수수료 22,000원 면제 이벤트(1대당 최대 5회)</li></ul></div></div>''',
+['VVIP/VIP: 낙찰 실적에 따라 분기별로 부여하는 상위 등급. 낙찰취소수수료 면제쿠폰은 낙찰 취소 시 부과되는 수수료를 면제(사용은 경매센터 문의, #199).'],
+S(183,199,211,212,213,217,227,228)+'<br>캠페인(#211~#213, #227~#228)은 세부 조건을 읽지 않고 제목만 확인')
+
+# 13 레인 센터
+slide('운영 구조','센터·레인 구성의 변천',
+'''<table>
+<colgroup><col style="width:14%"><col style="width:86%"></colgroup>
+<tbody>
+<tr><td>2020-06-30</td><td>실시간경매 2레인 운영(A 승용·SUV·RV / B 경차·화물·승합)</td></tr>
+<tr><td>2021-10-05</td><td>통합경매 시범: 화 분당 독립(차종별 A/B), 수 시화 독립(A/B), 목 양산 독립(단일 A), 금 시화·분당 통합(A/B)</td></tr>
+<tr><td>2023-12-20</td><td>수요일 인천/시화 경매 <b>단일 레인</b>(승용+SUV) 통합</td></tr>
+<tr><td>2024-11-01</td><td>금요일 시화/분당 차종별 2레인 → <b>센터별 2레인</b>(A 시화 / B 분당), 수요일 인천/시화도 센터별 2레인</td></tr>
+<tr><td>2025-01-03</td><td>1/1·1/2 휴무 대체로 인천·양산·시화 <b>3개 센터 통합, 센터별 3레인</b>(A 시화 / B 인천 / C 양산)</td></tr>
+<tr><td>2026-04~</td><td>화·금 분당/시화: A 승용(1000·4000번대), B SUV·기타(2000·5000번대)·수입(3000·6000번대). 목 양산/인천은 센터별 A/B</td></tr>
+<tr><td>2026-08~09</td><td>회차별 공지: 8/25 분당 B레인 14:00 시작, 9/8 1124회는 A 승용·경차 / B SUV·화물·수입, 센터별 출품번호대 배정</td></tr>
+</tbody></table>
+<p class="hint">이용안내 기준 "출품대수에 따라 1~4레인 운영". 레인·요일·센터 조합은 고정값이 아니라 회차마다 공지되는 가변 구조.</p>''',
+['레인: 동시에 진행되는 경매 줄. 공지상 차종(승용/SUV/수입 등), 센터, 출품번호대(1000번대 등)로 구분해 배정.'],
+S(46,100,164,190,195,209,234,236,237))
+
+# 14 체크리스트 1
+slide('제안서 작성 체크','놓치기 쉬운 점 ① — 수치·정책·시점',
+'''<ol class="chk">
+<li><b>요금은 2026-01-01 기준.</b> 낙찰수수료 2.2%(최소 165,000 / 최대 440,000, VAT 포함), 연회비 15만원, 보증금 300만원. 과거 수치(최소 11만, 연회비 25만) 인용 금지. 낙찰자·출품자 수수료가 다른 구조.</li>
+<li><b>정산은 전용 계좌 이체만.</b> 현금 정산은 2026-01-01 중단.</li>
+<li><b>응찰 단위는 전 구간 5만원(2026-08-25~).</b> 3만/5만 구간, 3/5/10만 구간 표기가 남은 자료는 최신화.</li>
+<li><b>후상담은 야간 운영.</b> 마감은 공지 시간, 다음날 08시까지, 21시·24시·08시 낙찰 처리, 상태 알림톡.</li>
+<li><b>쿠폰 규칙과 대조.</b> 자사 직접 낙찰차량 한정, 1대 1장, 메인 계정, 분기 유효, 낙찰취소 후 재발급 불가.</li>
+<li><b>기준값은 수시로 바뀜.</b> 등급 기준(2024-07, 2025-04), 쿠폰 캠페인(분기), 탁송 단가(매년·2026-05·07)는 운영자 설정값으로 다루는 서술이 안전.</li>
+<li><b>시점 구분.</b> PC 실행환경은 2025-04(Java 재설치)와 2026-05-13(Java 번들)이 다름. As-Is 서술 시 기준 시점 명시.</li>
+</ol>''',
+[],
+S(206,204,232,158,208,199,211,212,213,218,224,207))
+
+# 15 체크리스트 2
+slide('제안서 작성 체크','놓치기 쉬운 점 ② — 서비스 유형·채널·동의',
+'''<ol class="chk">
+<li><b>경매 유형은 5종 이상.</b> 실시간·부재자·후상담·지정시간(주말·우수회원 전용)·즉시체결. 지정시간경매는 낙찰 방식(입찰가 그대로)과 상향식 수정 규칙이 실시간·부재자와 다름.</li>
+<li><b>채널을 빠뜨리지 않기.</b> 경매센터, PC, 모바일 앱, 웹, 카카오톡 채널(알림톡·후상담), 알림 수단(SMS/LMS·이메일·푸시). AR 앱은 2024-12 종료.</li>
+<li><b>레인은 가변.</b> 1~4레인, 센터·요일·출품번호대가 회차마다 공지. 고정 레인 수를 전제로 쓰지 않기.</li>
+<li><b>동의 항목은 2026-08 기준.</b> 고유식별정보·CI·선택항목 동의 삭제, 마케팅·광고성 동의 분리, 야간 알림 동의 삭제, 휴면계정 조항 삭제. 야간 후상담 알림 발송 조건은 별도 확인.</li>
+<li><b>점검 정보의 성격 구분.</b> 성능·상태 점검 기록부(발급 27,500원)와 프리미엄 점검(참고용, 클레임 대상 아님) 구분.</li>
+<li><b>클레임·입찰 제한 규칙.</b> 리콜 등 차량 결함, 친환경 냉매 계통은 클레임 불가. 수출 목적 낙찰 불가 차량(1년 미만 등)은 입찰 가능 여부 안내와 관련.</li>
+<li><b>출품 접수.</b> 위탁 출품 접수 마감은 경매 전일 12시, 출품 조건·사전 통보 사항(규약 제12조) 강화.</li>
+</ol>''',
+[],
+S(152,156,210,191,127,231,235,223,192,225,214,197,206))
+
+# 16 한계·출처
+rows=''.join('<tr><td>#%d</td><td>%s</td><td>%d</td><td><a class="sl" href="%s">%s</a></td></tr>'%(n,BBS[n][0],BBS[n][1],BASE%BBS[n][1],'열기') for n in sorted(BBS))
+half=(len(BBS)+1)//2
+keys=sorted(BBS)
+def mk(ks): return ''.join('<tr><td>#%d</td><td>%s</td><td>%d</td></tr>'%(n,BBS[n][0],BBS[n][1]) for n in ks)
+slide('한계와 출처','확인하지 못한 것과 출처 대응표',
+'''<div class="grid2" style="grid-template-columns:.8fr 2.2fr">
+<div class="box"><h3>한계</h3><ul>
+<li>공지 본문이 이미지인 경우 화면을 읽어 옮김</li>
+<li>미열람: 쿠폰 캠페인 세부 조건(#211~#213, #227~#228), 규약 개정 #184·정정 #201, 첨부 PDF(경매규약 전문, 프로그램 매뉴얼, 탁송 단가표)</li>
+<li>응찰 단위 표기가 공지마다 달라 현행(#232)만 기준으로 삼음</li>
+<li>센터 4개(인천 포함)는 공지·기사로 확인, 인천 개소 시점은 2023(물류신문·현대차그룹 보도)</li>
+<li>공지 상세 주소: <span class="mono">autobell.co.kr/autoAuction/auctionNoticeView?bbsNo=식별번호</span></li></ul></div>
+<div><table class="mini"><thead><tr><th>번호</th><th>게시일</th><th>bbsNo</th><th>번호</th><th>게시일</th><th>bbsNo</th><th>번호</th><th>게시일</th><th>bbsNo</th><th>번호</th><th>게시일</th><th>bbsNo</th></tr></thead><tbody>'''+
+''.join('<tr>'+''.join(('<td>#%d</td><td>%s</td><td>%d</td>'%(keys[i+c*19],BBS[keys[i+c*19]][0],BBS[keys[i+c*19]][1]) if i+c*19<len(keys) else '<td></td><td></td><td></td>') for c in range(4))+'</tr>' for i in range(19))+
+'''</tbody></table></div></div>''',
+[],
+'출처: 오토벨 스마트옥션 공지사항 https://autobell.co.kr/autoAuction/auctionNotice · 이용안내 https://autobell.co.kr/autoAuction/auctionInfo?seq=0 · 물류신문 2026-07-20(klnews.co.kr/news/articleView.html?idxno=321995)',cls='last')
+
+CSS='''
+:root{--pbg:#eceef1;--pfg:#1c2026;--pmut:#5c6570}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pbg:#15181c;--pfg:#e6e9ed;--pmut:#98a1ac}}
+:root[data-theme="dark"]{--pbg:#15181c;--pfg:#e6e9ed;--pmut:#98a1ac}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pbg);color:var(--pfg);font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.page{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:24px 60px}
+.page h1{font-size:22px;font-weight:600;margin:0 0 4px}
+.page .sub{font-size:14px;color:var(--pmut);margin:0 0 18px}
+.frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#fff;border-radius:6px;box-shadow:0 1px 6px rgba(0,0,0,.18);margin:0 0 18px}
+.frame .slide{position:absolute;left:0;top:0;transform-origin:0 0}
+.raw .frame{aspect-ratio:auto;width:1920px;height:1080px;margin:0;box-shadow:none;border-radius:0}
+.slide{width:1920px;height:1080px;background:#fff;color:#1c2026;padding:52px 72px 0;display:flex;flex-direction:column;font-size:22px;line-height:1.45}
+.slide .kick{font-size:20px;font-weight:600;color:#1f5a4a;letter-spacing:.02em;margin:0 0 4px}
+.slide h2{font-size:42px;line-height:1.22;font-weight:700;margin:0 0 20px;text-wrap:balance}
+.slide .main{flex:1;min-height:0;overflow:hidden}
+.slide .foot{padding:10px 0 22px;border-top:2px solid #d8dde3}
+.slide .notes{font-size:16.5px;line-height:1.38;color:#3d4650;margin:0 0 8px;padding:0;list-style:none;columns:2;column-gap:40px}
+.slide .notes li{break-inside:avoid;margin:0 0 3px}
+.slide .src{font-size:15.5px;color:#66707b;display:flex;justify-content:space-between;gap:24px}
+.slide .src a{color:#3c5a8f;text-decoration:none}
+.slide .pg{white-space:nowrap}
+sup.fn{font-size:.62em;color:#1f5a4a;font-weight:700;margin-left:1px}
+.slide table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:var(--fs,21px)}
+.slide th,.slide td{border-bottom:2px solid #e0e4e9;padding:11px 12px;text-align:left;vertical-align:top;word-break:keep-all;overflow-wrap:anywhere}
+.slide th{background:#f1f3f6;color:#4a5460;font-size:calc(var(--fs,21px)*0.88);font-weight:600}
+.slide td:first-child{font-weight:600}
+.slide table.tl td{font-size:var(--fs,21px)}
+.slide table.tl td:first-child{font-size:calc(var(--fs,21px)*1.2);color:#1f5a4a}
+.slide table.mini{font-size:14.5px}
+.slide table.mini th,.slide table.mini td{padding:4px 5px;font-size:14.5px;font-weight:400}
+.slide .box{border:2px solid #dde1e7;border-radius:14px;padding:16px 20px;background:#fafbfc}
+.slide .box h3{font-size:calc(var(--fs,20.5px)*1.15);margin:0 0 8px;font-weight:700}
+.slide .box ul{margin:0;padding-left:24px}
+.slide .box li{margin:0 0 5px;font-size:var(--fs,20.5px)}
+.slide .box p{margin:0;font-size:var(--fs,20.5px)}
+.slide .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.slide .three{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px}
+.slide .cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px}
+.slide .lead{font-size:30px;line-height:1.5;margin:8px 0 0;max-width:1560px}
+.slide .hint{margin:14px 0 0;font-size:19px;color:#6a4808;background:#fbefd5;border-radius:10px;padding:10px 16px}
+.slide .mono{font-family:ui-monospace,Menlo,monospace;font-size:.85em}
+.slide ol.chk{list-style:none;margin:0;padding:0;counter-reset:c}
+.slide ol.chk li{position:relative;padding:11px 16px 11px 58px;border:2px solid #dde1e7;border-radius:12px;margin:0 0 10px;background:#fafbfc;counter-increment:c;font-size:var(--fs,21.5px);line-height:1.42}
+.slide ol.chk li::before{content:counter(c);position:absolute;left:16px;top:11px;width:30px;height:30px;border-radius:50%;background:#e0efe9;color:#174438;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.slide.cover h2{font-size:56px}
+'''
+FS=json.load(open('fs.json')) if os.path.exists('fs.json') else {}
+def render_slide(i,s,total):
+    notes=''.join('<li><span class="nn">%d)</span> %s</li>'%(k+1,html.escape(t) if False else t) for k,t in enumerate(s['notes']))
+    notes_html='<ul class="notes">%s</ul>'%notes if s['notes'] else ''
+    cls='slide'+(' cover' if i==0 else '')
+    return '''<div class="frame"><section class="%s" id="s%d"><div class="kick">%s</div><h2>%s</h2><div class="main" style="%s">%s</div><div class="foot">%s<div class="src"><span>%s</span><span class="pg">%d / %d</span></div></div></section></div>'''%(cls,i+1,s['kicker'],s['title'],('--fs:%spx'%FS[str(i+1)]) if str(i+1) in FS else '',s['body'],notes_html,s['source'],i+1,total)
+
+total=len(slides)
+body=''.join(render_slide(i,s,total) for i,s in enumerate(slides))
+JS='''<script>
+(function(){
+var raw=location.hash==='#raw';
+if(raw){document.documentElement.classList.add('raw');document.body.classList.add('raw');return;}
+function fit(){document.querySelectorAll('.frame').forEach(function(f){var s=f.querySelector('.slide');var k=f.clientWidth/1920;s.style.transform='scale('+k+')';});}
+window.addEventListener('resize',fit);fit();
+if(window.ResizeObserver){var ro=new ResizeObserver(fit);document.querySelectorAll('.frame').forEach(function(f){ro.observe(f);});}
+})();
+</script>'''
+doc='''<title>스마트옥션 변경 정리 슬라이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>%s</style>
+<div class="page"><h1>오토벨 스마트옥션 최근 정책·서비스 유형 변경</h1><p class="sub">제안서 삽입용 16:9 슬라이드 %d장 · 공지사항 전 기간 검토(조회 2026-09-21) · 각 슬라이드 하단 각주는 용어 설명, 출처의 공지 번호는 원문 링크</p>%s</div>%s'''%(CSS,total,body,JS)
+open('deck.html','w',encoding='utf-8').write(doc)
+json.dump([dict(k=s['kicker'],t=re.sub('<[^>]+>','',s['title'].replace('<br>',' '))) for s in slides],open('titles.json','w',encoding='utf-8'),ensure_ascii=False)
+print(total)
